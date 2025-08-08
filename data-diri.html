@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simpan Data Diri</title>
+  <style>
+    :root{--accent:#0b5;--bg:#f7f7f9;--card:#fff}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0;background:var(--bg);color:#111}
+    .container{max-width:960px;margin:28px auto;padding:18px}
+    h1{margin:0 0 12px;font-size:20px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(12,20,30,0.06)}
+    label{display:block;font-size:13px;margin-bottom:6px}
+    input[type=text],input[type=email],textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #e3e6ea;font-size:14px}
+    .row{display:flex;gap:8px}
+    button{background:var(--accent);border:none;color:#003;height:36px;padding:0 12px;border-radius:10px;cursor:pointer}
+    .muted{color:#555;font-size:13px}
+    .preview{width:100%;height:180px;background:#eee;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .preview img{max-width:100%;height:auto}
+    .list{margin-top:12px}
+    .entry{display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid #eef;}
+    .entry + .entry{margin-top:10px}
+    .thumb{width:78px;height:78px;border-radius:8px;overflow:hidden;flex:0 0 78px;background:#fafafa}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .meta{flex:1}
+    .actions{display:flex;gap:6px}
+    .small{font-size:13px;padding:6px 8px;border-radius:8px}
+    .danger{background:#ffdddd;color:#900}
+    .secondary{background:#f0f0f5;color:#222}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    footer{margin-top:18px;font-size:13px;color:#666}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}.preview{height:140px}.thumb{width:60px;height:60px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Simpan Data Diri</h1>
+    <div class="grid">
+      <div class="card">
+        <form id="form">
+          <input type="hidden" id="editingId" />
+          <label>Nama</label>
+          <input id="name" type="text" placeholder="Nama lengkap" required />
+
+          <label>Email</label>
+          <input id="email" type="email" placeholder="email@contoh.com" />
+
+          <label>Telepon</label>
+          <input id="phone" type="text" placeholder="0812xxxx" />
+
+          <label>Alamat (ditampilkan di Google Maps bila diisi)</label>
+          <input id="address" type="text" placeholder="Jalan, Kota, Negara atau link Google Maps" />
+
+          <label>Link Google Maps (opsional)</label>
+          <input id="mapsLink" type="text" placeholder="https://maps.google.com/?q=... atau kosong" />
+
+          <label>Catatan</label>
+          <textarea id="notes" rows="3" placeholder="Keterangan tambahan..."></textarea>
+
+          <label>Foto (unggah)</label>
+          <input id="photoInput" type="file" accept="image/*" />
+          <div class="preview" id="photoPreview">Preview foto</div>
+
+          <div style="margin-top:10px" class="row">
+            <button type="submit">Simpan</button>
+            <button id="resetBtn" type="button" class="secondary small">Bersihkan</button>
+            <button id="exportBtn" type="button" class="small">Ekspor JSON</button>
+            <button id="importBtn" type="button" class="small">Impor JSON</button>
+          </div>
+        </form>
+        <div style="margin-top:8px" class="muted">Data disimpan di browser (localStorage). Untuk berbagi atau backup, gunakan tombol ekspor impor.</div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Daftar Data</h3>
+        <div id="list" class="list"></div>
+        <footer>Tips: klik "Lihat di Maps" untuk membuka alamat di Google Maps. Foto disimpan sebagai data URL.</footer>
+      </div>
+    </div>
+  </div>
+
+<script>
+const KEY = 'userdata_entries_v1';
+let entries = JSON.parse(localStorage.getItem(KEY) || '[]');
+
+const el = id => document.getElementById(id);
+const form = el('form');
+const photoInput = el('photoInput');
+const photoPreview = el('photoPreview');
+const list = el('list');
+
+let currentPhotoDataUrl = null;
+
+function render() {
+  list.innerHTML = '';
+  if(!entries.length) { list.innerHTML = '<div class="muted">Belum ada data tersimpan.</div>'; return }
+  entries.slice().reverse().forEach(e => {
+    const node = document.createElement('div'); node.className = 'entry';
+    node.innerHTML = `
+      <div class="thumb">${e.photo?`<img src="${e.photo}" alt="foto">`:'<div style="display:flex;align-items:center;justify-content:center;height:100%" class="muted">No<br>Photo</div>'}</div>
+      <div class="meta">
+        <strong>${escapeHtml(e.name||'—')}</strong>
+        <div class="muted">${escapeHtml(e.email||'')}${e.phone? ' · '+escapeHtml(e.phone):''}</div>
+        <div style="margin-top:6px">${escapeHtml(e.address||'')}</div>
+        <div style="margin-top:6px" class="controls">
+          <button class="small" onclick="openMaps('${encodeURIComponent(e.mapsLink||e.address||'')}')">Lihat di Maps</button>
+          <button class="small" onclick="editEntry('${e.id}')">Edit</button>
+          <button class="small danger" onclick="deleteEntry('${e.id}')">Hapus</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(node);
+  });
+}
+
+function saveStorage(){ localStorage.setItem(KEY, JSON.stringify(entries)); }
+
+photoInput.addEventListener('change', ()=>{
+  const f = photoInput.files[0];
+  if(!f) { currentPhotoDataUrl = null; photoPreview.innerHTML = 'Preview foto'; return }
+  const reader = new FileReader();
+  reader.onload = e => { currentPhotoDataUrl = e.target.result; photoPreview.innerHTML = `<img src="${currentPhotoDataUrl}" alt="preview">`; };
+  reader.readAsDataURL(f);
+});
+
+form.addEventListener('submit', e=>{
+  e.preventDefault();
+  const id = el('editingId').value || cryptoRandomId();
+  const entry = {
+    id,
+    name: el('name').value.trim(),
+    email: el('email').value.trim(),
+    phone: el('phone').value.trim(),
+    address: el('address').value.trim(),
+    mapsLink: el('mapsLink').value.trim(),
+    notes: el('notes').value.trim(),
+    photo: currentPhotoDataUrl
+  };
+  const idx = entries.findIndex(x=>x.id===id);
+  if(idx>=0) entries[idx] = entry; else entries.push(entry);
+  saveStorage(); render(); clearForm();
+});
+
+function clearForm(){ form.reset(); el('editingId').value=''; currentPhotoDataUrl = null; photoPreview.innerHTML='Preview foto'; }
+
+function cryptoRandomId(){ return 'id_'+Math.random().toString(36).slice(2,10); }
+
+function editEntry(id){ const e = entries.find(x=>x.id===id); if(!e) return; el('editingId').value=e.id; el('name').value=e.name||''; el('email').value=e.email||''; el('phone').value=e.phone||''; el('address').value=e.address||''; el('mapsLink').value=e.mapsLink||''; el('notes').value=e.notes||''; currentPhotoDataUrl = e.photo||null; photoPreview.innerHTML = currentPhotoDataUrl?`<img src="${currentPhotoDataUrl}" alt="preview">`:'Preview foto'; window.scrollTo({top:0,behavior:"smooth"}); }
+
+function deleteEntry(id){ if(!confirm('Hapus data ini?')) return; entries = entries.filter(x=>x.id!==id); saveStorage(); render(); }
+
+function openMaps(q){
+  if(!q) return alert('Alamat / link maps kosong.');
+  // if user provided an absolute URL (contains google), open it; else open query
+  const decoded = decodeURIComponent(q);
+  const isUrl = decoded.startsWith('http://') || decoded.startsWith('https://');
+  const url = isUrl ? decoded : ('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(decoded));
+  window.open(url,'_blank');
+}
+
+el('resetBtn').addEventListener('click', ()=>{ if(confirm('Bersihkan form?')) clearForm(); });
+
+el('exportBtn').addEventListener('click', ()=>{
+  const dataStr = JSON.stringify(entries, null, 2);
+  const blob = new Blob([dataStr], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'userdata_backup.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+
+el('importBtn').addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange = ()=>{
+    const f = inp.files[0]; if(!f) return; const r = new FileReader(); r.onload = ev=>{
+      try{
+        const imported = JSON.parse(ev.target.result);
+        if(!Array.isArray(imported)) throw new Error('Format tidak dikenali');
+        // simple merge: append imported entries but avoid id collision
+        imported.forEach(it=>{ it.id = it.id || cryptoRandomId(); if(!entries.some(x=>x.id===it.id)) entries.push(it); });
+        saveStorage(); render(); alert('Impor selesai');
+      }catch(err){ alert('Gagal impor: '+err.message); }
+    }; r.readAsText(f);
+  }; inp.click();
+});
+
+function escapeHtml(s){ if(!s) return ''; return String(s)
+  .replace(/&/g,'&amp;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;')
+  .replace(/'/g,'&#39;'); }
+
+render();
+</script>
+</body>
+</html>

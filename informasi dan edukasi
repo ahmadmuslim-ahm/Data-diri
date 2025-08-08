@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Web App with 5 Buttons</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #71b7e6, #9b59b6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    color: #fff;
+  }
+  h1 {
+    margin-bottom: 1rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  }
+  .button-container {
+    display: flex;
+    gap: 1.5rem;
+  }
+  button {
+    background-color: #ffffff33;
+    border: 2px solid #fff;
+    border-radius: 50px;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  button:hover {
+    background-color: #fff;
+    color: #9b59b6;
+  }
+  #message {
+    margin-top: 2rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    min-height: 30px;
+    text-align: center;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.25);
+  }
+</style>
+</head>
+<body>
+  <h1>Web App with 5 Buttons</h1>
+  <div class="button-container">
+    <button id="btn1">Button 1</button>
+    <button id="btn2">Button 2</button>
+    <button id="btn3">Button 3</button>
+    <button id="btn4">Button 4</button>
+    <button id="btn5">Button 5</button>
+  </div>
+  <div id="message"></div>
+
+  <script>
+    const messages = [
+      "You clicked Button 1!",
+      "Button 2 was clicked!",
+      "This is Button 3 speaking!",
+      "Button 4 pressed!",
+      "You chose Button 5!"
+    ];
+    const messageDiv = document.getElementById('message');
+
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('btn' + i).addEventListener('click', () => {
+        messageDiv.textContent = messages[i - 1];
+      });
+    }
+  </script>
+</body>
+</html>
+
